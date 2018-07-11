@@ -1,0 +1,103 @@
+	public static class FirstReducerArrayListPairs extends Reducer<LongWritable, Text, Text, Text> {
+		@Override
+		public void reduce(LongWritable key, Iterable<Text> values, Context context)
+				throws IOException, InterruptedException {
+	
+			/*
+			 * Reducer Class
+			 */
+			Print("\n@Red1>" + key+" , ");
+			Double simVal;
+			String outString;
+	
+			ArrayList<KeySetPair> valList = new ArrayList<>();
+			for (Text val: values) {
+				
+				String[] valSplit = val.toString().split("\\|"); // split to <rid | list>
+				valList.add(new KeySetPair(valSplit[0], valSplit[1]));
+			}
+			Print("len: "+valList.size()+" el:"+valList+"\n");
+			
+			if (valList.size() > 1) { // if there is at least 1 pair
+				KeySetPair ksVal1;
+				while(!valList.isEmpty()) {
+					ksVal1 = valList.remove(0);
+	
+					for (KeySetPair ksVal2: valList) {
+						/*
+						 * Compare val1 to val2 -> similarity
+						 */
+						
+						simVal = ksVal1.compare(ksVal2);
+	
+						Print("\n"+ksVal1 +" vs "+ ksVal2);
+						Print("\n\t"+ksVal1.compareString(ksVal2));
+						Print("\n\tmax numset:"+ksVal1.getMaxIntersect()+"\n");
+	
+						// Transmit only pairs with greater than TAU similarity
+						if (simVal >= TAU) {
+							// place smallest rid on LHS of pair, and emit
+							if (Integer.valueOf(ksVal1.key) < Integer.valueOf(ksVal2.key)) {
+								outString = "(" + ksVal1.key + "," + ksVal2.key + ")";
+							} else {
+								outString = "(" + ksVal2.key + "," + ksVal1.key + ")";
+							}
+							Print(outString + "=" + simVal);
+							context.write(new Text(outString), new Text(simVal.toString()));
+						} else {
+							Print("Dropped");
+						}
+					}// end inner loop
+				}// end while loop
+			} // end if len > 1
+		}
+	}
+
+	public static class KeySetPair {
+		
+		private String key;
+		private HashSet<String> valSet;
+		private SetView<String> numSet, denSet;
+	
+		public KeySetPair() {
+		}
+	
+		public KeySetPair(String first, String second) {
+			set(first, second);
+		}
+	
+		public void set(String left, String right) {
+	
+			key = left;
+			HashSet<String>inSet = new HashSet<>();
+			Collections.addAll(inSet, right.split("\\:")); // split list, add to set
+			valSet = inSet;
+		}
+		
+		public Double compare(KeySetPair KSP2) {
+			SetView<String> numSet, denSet;
+			Double simVal;
+			numSet = Sets.intersection(valSet, KSP2.valSet); // calc numerator set
+			denSet = Sets.union(valSet, KSP2.valSet); // calc denominator set
+			simVal = Double.valueOf(numSet.size()) / denSet.size(); // calc similarity
+			return simVal;
+		}
+		
+		public String compareString(KeySetPair KSP2) {
+//			SetView<String> numSet, denSet;
+			Double simVal;
+			numSet = Sets.intersection(valSet, KSP2.valSet); // calc numerator set
+			denSet = Sets.union(valSet, KSP2.valSet); // calc denominator set
+			simVal = Double.valueOf(numSet.size()) / denSet.size(); // calc similarity
+			return numSet + "/" + denSet + "=>" + simVal;
+		}
+		
+		public String getMaxIntersect() {
+			return Collections.max(numSet);
+		}
+		
+		public String toString() {
+			return key + "|" + valSet;
+		}
+		
+	}
