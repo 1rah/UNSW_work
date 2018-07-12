@@ -1,0 +1,5 @@
+category	text
+yes	Chinese Beijing Chinese
+yes	Chinese Chinese Shanghai
+yes	Chinese Macao
+no	Tokyo Japan Chinese
